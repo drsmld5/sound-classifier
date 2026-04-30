@@ -1,0 +1,113 @@
+# ── Python ───────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.Python
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ── PyInstaller ──────────────────────────────────────────────────
+*.spec.bak
+__pycache__/
+dist/
+build/
+
+# ── FastAPI / Uvicorn ────────────────────────────────────────────
+*.log
+
+# ── Database ─────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# ── ML models and weights ────────────────────────────────────────
+models/
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.pb
+*.h5
+*.hdf5
+*.bin
+*.safetensors
+
+# ── Testing ──────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+nosetests.xml
+test-results/
+
+# ── Type checkers / linters ──────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.pytype/
+
+# ── Jupyter (if used for model experimentation) ──────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Environment variables ────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── macOS ────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+*.icloud
+
+# ── JetBrains / PyCharm CE ───────────────────────────────────────
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# ── Audio sample / test files (keep repo lean) ───────────────────
+test_audio/
+sample_tracks/
+*.mp3
+*.wav
+*.flac
+*.aiff
+*.m4a
+*.aac
+*.ogg
