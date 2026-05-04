@@ -1,23 +1,25 @@
 # main.py
-# Phase 1 CLI — run directly to validate the scanner pipeline
-# Usage: python main.py /path/to/your/music/folder
-
 import sys
 import json
 from dataclasses import asdict
-
-from pip._internal.resolution.resolvelib import factory
-
 from pipeline.scanner import scan_folder
+from pipeline.bpm import detect_bpm
+from pipeline.key import detect_key
 
 
 def main():
+    print(">>> MAIN.PY LOADED - VERSION CHECK 001")
     if len(sys.argv) < 2:
-        print("Usage: python main.py <folder_path>")
+        print("Usage: python main.py <folder_path> [--json] [--analyze]")
         sys.exit(1)
 
     folder = sys.argv[1]
+    do_analyze = '--analyze' in sys.argv
+    do_json = '--json' in sys.argv
+
     print(f"\nScanning: {folder}\n")
+    print(f">>> sys.argv = {sys.argv}")
+    print(f">>> do_analyze = {do_analyze}")
 
     try:
         tracks = scan_folder(folder)
@@ -30,25 +32,33 @@ def main():
         sys.exit(0)
 
     for track in tracks:
-        print(f"  {track.relative_path}")
-        if track.duration_seconds:
-            mins = int(track.duration_seconds // 60)
-            secs = int(track.duration_seconds % 60)
-            print(f"    Duration : {mins}:{secs:02d}")
-        if track.embedded_bpm:
-            print(f"    BPM      : {track.embedded_bpm}")
-        if track.embedded_key:
-            print(f"    Key      : {track.embedded_key}")
-        if track.embedded_genre:
-            print(f"    Genre    : {track.embedded_genre}")
-        if track.artist:
-            print(f"    Artist   : {track.artist}")
+        print(f"  {track.relative_path}  [{track.size_mb} MB]")
+
+        if do_analyze:
+            print(f"\n  Analysing: {track.filename}")
+
+            bpm_result = detect_bpm(track.path, embedded_bpm=track.embedded_bpm)
+            print(f"  BPM result: {bpm_result}")
+            track.detected_bpm = bpm_result.corrected_bpm
+            track.confidence['bpm'] = bpm_result.confidence
+
+            key_result = detect_key(track.path, embedded_key=track.embedded_key)
+            print(f"  Key result: {key_result}")
+            track.detected_key = key_result.label
+            track.confidence['key'] = key_result.confidence
+            # Verify assignment happened
+            print(f"    → track.detected_bpm = {track.detected_bpm}")
+            print(f"    → track.detected_key = {track.detected_key}")
+
+        elif track.embedded_bpm or track.embedded_key:
+            print(f"    BPM tag  : {track.embedded_bpm or '—'}")
+            print(f"    Key tag  : {track.embedded_key or '—'}")
+
         print()
 
     print(f"Found {len(tracks)} audio file(s)")
 
-    # Optionally dump full JSON
-    if '--json' in sys.argv:
+    if do_json:
         print(json.dumps([asdict(t) for t in tracks], indent=2, ensure_ascii=False))
 
 
