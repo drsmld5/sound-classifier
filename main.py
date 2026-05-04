@@ -3,25 +3,19 @@ import sys
 import json
 from dataclasses import asdict
 from pipeline.scanner import scan_folder
-from pipeline.bpm import detect_bpm
-from pipeline.key import detect_key
-from pipeline.genre import detect_genre
-from pipeline.vibe import detect_vibe
+from pipeline.aggregator import classify_track, classify_batch
 
 
 def main():
-    print(">>> MAIN.PY LOADED - VERSION CHECK 001")
     if len(sys.argv) < 2:
-        print("Usage: python main.py <folder_path> [--json] [--analyze]")
+        print("Usage: python main.py <folder_path> [--analyze] [--json]")
         sys.exit(1)
 
     folder = sys.argv[1]
-    do_analyze = '--analyze' in sys.argv
+    do_analyze = '--analyze' in sys.argv or '--analyse' in sys.argv
     do_json = '--json' in sys.argv
 
     print(f"\nScanning: {folder}\n")
-    print(f">>> sys.argv = {sys.argv}")
-    print(f">>> do_analyze = {do_analyze}")
 
     try:
         tracks = scan_folder(folder)
@@ -33,65 +27,53 @@ def main():
         print("No audio files found.")
         sys.exit(0)
 
-    for track in tracks:
-        print(f"  {track.relative_path}  [{track.size_mb} MB]")
+    if not do_analyze:
+        # Scanner only — fast metadata read
+        for track in tracks:
+            print(f"  {track.relative_path}  [{track.size_mb} MB]")
+            if track.duration_seconds:
+                mins = int(track.duration_seconds // 60)
+                secs = int(track.duration_seconds % 60)
+                print(f"    Duration : {mins}:{secs:02d}")
+            if track.artist:
+                print(f"    Artist   : {track.artist}")
+            if track.title:
+                print(f"    Title    : {track.title}")
+            print()
+        print(f"Found {len(tracks)} audio file(s)")
+        return
 
-        if do_analyze:
-            print(f"\n  Analysing: {track.filename}")
+    # Full pipeline — analyze all tracks
+    print(f"Analyzing {len(tracks)} track(s)...\n")
 
-            bpm_result = detect_bpm(track.path, embedded_bpm=track.embedded_bpm)
-            print(f"  BPM result: {bpm_result}")
-            track.detected_bpm = bpm_result.corrected_bpm
-            track.confidence['bpm'] = bpm_result.confidence
+    def on_progress(current, total, result):
+        status = "✓" if not result.has_errors else "⚠"
+        print(f"  [{current}/{total}] {status}  {result.summary()}")
+        if result.has_errors:
+            for err in result.errors:
+                print(f"         ✗ {err.module}: {err.error}")
 
-            key_result = detect_key(track.path, embedded_key=track.embedded_key)
-            print(f"  Key result: {key_result}")
-            track.detected_key = key_result.label
-            track.confidence['key'] = key_result.confidence
+    results = classify_batch(tracks, on_progress=on_progress)
 
-            # Genre
-            try:
-                genre_result = detect_genre(
-                    track.path,
-                    bpm=track.detected_bpm,
-                    embedded_genre=track.embedded_genre
-                )
-                track.detected_genre = genre_result.genre
-                track.confidence['genre'] = genre_result.confidence
-                print(f"    Genre    : {genre_result.genre} "
-                      f"(source: {genre_result.source}, "
-                      f"confidence: {genre_result.confidence})")
-            except RuntimeError as e:
-                print(f"    Genre    : ERROR — {e}")
+    # Summary
+    complete = sum(1 for r in results if r.is_complete)
+    errors = sum(1 for r in results if r.has_errors)
+    total_time = sum(r.processing_time_seconds for r in results)
 
-            try:
-                vibe_result = detect_vibe(
-                    track.path,
-                    bpm=track.detected_bpm
-                )
-                track.detected_vibe = vibe_result.label
-                track.confidence['vibe'] = vibe_result.confidence
-                print(f"    Vibe     : {vibe_result.label} "
-                      f"[energy: {vibe_result.energy}] "
-                      f"[tags: {', '.join(vibe_result.tags)}] "
-                      f"(confidence: {vibe_result.confidence})")
-            except RuntimeError as e:
-                print(f"    Vibe     : ERROR — {e}")
-
-            # Verify assignment happened
-            print(f"    → track.detected_bpm = {track.detected_bpm}")
-            print(f"    → track.detected_key = {track.detected_key}")
-
-        elif track.embedded_bpm or track.embedded_key:
-            print(f"    BPM tag  : {track.embedded_bpm or '—'}")
-            print(f"    Key tag  : {track.embedded_key or '—'}")
-
-        print()
-
-    print(f"Found {len(tracks)} audio file(s)")
+    print(f"\n{'─' * 60}")
+    print(f"  Tracks analyzed : {len(results)}")
+    print(f"  Fully complete  : {complete}")
+    print(f"  With errors     : {errors}")
+    print(f"  Total time      : {total_time:.1f}s")
+    print(f"  Avg per track   : {total_time / len(results):.1f}s")
+    print(f"{'─' * 60}\n")
 
     if do_json:
-        print(json.dumps([asdict(t) for t in tracks], indent=2, ensure_ascii=False))
+        print(json.dumps(
+            [asdict(r) for r in results],
+            indent=2,
+            ensure_ascii=False
+        ))
 
 
 if __name__ == '__main__':
