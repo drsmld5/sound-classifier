@@ -6,6 +6,7 @@ from pipeline.scanner import scan_folder
 from pipeline.bpm import detect_bpm
 from pipeline.key import detect_key
 from pipeline.genre import detect_genre
+from pipeline.vibe import detect_vibe
 
 
 def main():
@@ -62,6 +63,20 @@ def main():
                       f"confidence: {genre_result.confidence})")
             except RuntimeError as e:
                 print(f"    Genre    : ERROR — {e}")
+
+            try:
+                vibe_result = detect_vibe(
+                    track.path,
+                    bpm=track.detected_bpm
+                )
+                track.detected_vibe = vibe_result.label
+                track.confidence['vibe'] = vibe_result.confidence
+                print(f"    Vibe     : {vibe_result.label} "
+                      f"[energy: {vibe_result.energy}] "
+                      f"[tags: {', '.join(vibe_result.tags)}] "
+                      f"(confidence: {vibe_result.confidence})")
+            except RuntimeError as e:
+                print(f"    Vibe     : ERROR — {e}")
 
             # Verify assignment happened
             print(f"    → track.detected_bpm = {track.detected_bpm}")
