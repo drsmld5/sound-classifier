@@ -5,6 +5,7 @@ from dataclasses import asdict
 from pipeline.scanner import scan_folder
 from pipeline.bpm import detect_bpm
 from pipeline.key import detect_key
+from pipeline.genre import detect_genre
 
 
 def main():
@@ -46,6 +47,22 @@ def main():
             print(f"  Key result: {key_result}")
             track.detected_key = key_result.label
             track.confidence['key'] = key_result.confidence
+
+            # Genre
+            try:
+                genre_result = detect_genre(
+                    track.path,
+                    bpm=track.detected_bpm,
+                    embedded_genre=track.embedded_genre
+                )
+                track.detected_genre = genre_result.genre
+                track.confidence['genre'] = genre_result.confidence
+                print(f"    Genre    : {genre_result.genre} "
+                      f"(source: {genre_result.source}, "
+                      f"confidence: {genre_result.confidence})")
+            except RuntimeError as e:
+                print(f"    Genre    : ERROR — {e}")
+
             # Verify assignment happened
             print(f"    → track.detected_bpm = {track.detected_bpm}")
             print(f"    → track.detected_key = {track.detected_key}")
